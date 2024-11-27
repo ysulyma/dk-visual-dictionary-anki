@@ -1,7 +1,8 @@
 # files
-audio
-db.sqlite3
-output.apkg
+*.apkg
+*.m4a
+*.sqlite3
+*.zip
 
 # Python
 __pycache__

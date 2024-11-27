@@ -1,105 +1,114 @@
-import genanki
 import sqlite3
-from typing import List
+
+import genanki
+
+from schema import Article, Chapter, Context
+from utils import fetch_all_ordered, make_note
 
 # config
 AUDIO_DIR = "audio"
+DB_FILE = "db.sqlite3"
+
 DECK_ID = 1892930485
+# TEST_DECK_ID = 1355766856
+
+
 DECK_NAME = "Ukrainian Visual Dictionary"
-OUTPUT_FILE = "output.apkg"
+OUTPUT_FILE = "ukrainian-english.apkg"
 
 # don't change this
 NULL_STRING = "(null)"
 
-
-def make_note(front: str, back: str, audio: str, tags: List[str]):
-    """
-    Makes a note
-    """
-    return genanki.Note(
-        model=genanki.BASIC_AND_REVERSED_CARD_MODEL,
-        fields=[f"{front}<br>[sound:{audio}]", back],
-        tags=tags,
-    )
+deck_counter = 0
 
 
 # create a deck
-deck = genanki.Deck(DECK_ID, DECK_NAME)
+# deck = genanki.Deck(DECK_ID, DECK_NAME)
 
 # create a package
-package = genanki.Package(deck)
+package = genanki.Package([])
 
 # connect to the database
-with sqlite3.connect("db.sqlite3") as conn:
+with sqlite3.connect(DB_FILE) as conn:
     conn.row_factory = sqlite3.Row
 
-    cursor = conn.execute(
-        """
-            -- chapter
-            SELECT
-                orderID order_id,
-                'chapter' row_type,
-                chaptername front,
-                chaptertrans back,
-                chapteraudioref audio,
-                chapterpagenumber page_number
-            FROM Chapter
-        UNION
-            -- article
-            SELECT
-                orderid order_id,
-                'article' row_type,
-                articlename front,
-                articletrans back,
-                articleaudioref audio,
-                articlepagenumber page_number
-            FROM Article
-        UNION
-            -- section
-            SELECT
-                orderid order_id,
-                'section' row_type,
-                sectionname front,
-                sectiontrans back,
-                sectionaudioref audio,
-                sectionpagenumber page_number
-            FROM section
-        UNION
-            -- word
-            SELECT
-                orderid order_id,
-                'word' row_type,
-                wordname front,
-                wordtrans back,
-                wordaudioref audio,
-                wordpagenumber page_number
-            FROM Word
-        ORDER BY order_id
-        """
-    )
+    ctx = Context(AUDIO_DIR=AUDIO_DIR, conn=conn, package=package)
 
-    for row in cursor:
-        audio = row["audio"]
-        back = row["back"]
-        front = row["front"]
-        page_number = row["page_number"]
-        type = row["row_type"]
+    # get chapters
+    chapters = [*Chapter.fetch_all(ctx)]
+    for i, chapter in enumerate(chapters):
+        # compute page boundaries
+        chapter_first_page = chapter.chapterpagenumber
+        if i == len(chapters) - 1:
+            chapter_last_page = 10000000000000000000000
+        else:
+            chapter_last_page = chapters[i + 1].chapterpagenumber - 1
 
-        if audio == NULL_STRING:
-            continue
+        # log
+        print(f"{chapter.chaptertrans} {chapter_first_page} - {chapter_last_page}")
 
-        # add audio
-        package.media_files.append(f"{AUDIO_DIR}/{audio}")
+        # get articles
+        articles = [*Article.fetch_all(ctx, chapter.chapterid)]
 
-        # add note
-        deck.add_note(
-            make_note(
-                front=front,
-                back=back,
-                audio=audio,
-                tags=[f"page:{page_number}"],
+        for article_index, article in enumerate(articles):
+            # compute page boundaries
+            article_first_page = article.articlepagenumber
+            if article_index == len(articles) - 1:
+                article_last_page = chapter_last_page
+            else:
+                article_last_page = articles[article_index + 1].articlepagenumber - 1
+
+            # log
+            print(
+                f"\t{article.articletrans} {article_first_page} - {article_last_page}"
             )
-        )
+
+            # make deck
+            deck = genanki.Deck(
+                deck_id=DECK_ID + deck_counter,
+                name=f"{DECK_NAME}::{chapter.chaptertrans}::{article.articletrans}",
+            )
+            deck_counter += 1
+            if package.decks is None:
+                package.decks = []
+            package.decks.append(deck)
+
+            # include chapter card
+            if article_index == 0:
+                deck.add_note(make_note(ctx, chapter.to_entry()))
+
+            # include article card
+            # null string for some reason
+            if article.articleaudioref == NULL_STRING:
+                continue
+
+            deck.add_note(
+                make_note(
+                    ctx,
+                    article.to_entry(),
+                )
+            )
+
+            # get words and sections
+            for entry in fetch_all_ordered(
+                ctx,
+                chapters=False,
+                articles=False,
+                page_min=article_first_page,
+                page_max=article_last_page,
+            ):
+                # null string for some reason
+                if entry.audio == NULL_STRING:
+                    continue
+
+                # log
+                if entry.row_type == "word":
+                    print(f"\t\t{entry.back} {entry.page_number}")
+                elif entry.row_type == "section":
+                    print(f"\t\t--- {entry.back} --- {entry.page_number}")
+
+                # add note
+                deck.add_note(make_note(ctx, entry))
 
 
 # export the package
