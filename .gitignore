@@ -1,0 +1,8 @@
+# files
+audio
+db.sqlite3
+output.apkg
+
+# Python
+__pycache__
+
