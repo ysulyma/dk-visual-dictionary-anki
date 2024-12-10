@@ -4,6 +4,9 @@
 *.sqlite3
 *.zip
 
+# deck
+deck-id.txt
+
 # Python
 __pycache__
 

@@ -1,3 +1,15 @@
+# DK Visual Dictionary -> Anki code
+
+- [Genanki](https://github.com/kerrickstaley/genanki)
+
+## Setup
+
+```bash
+python3 -c "import random; print(random.randrange(1 << 30, 1 << 31))" > deck-id.txt
+```
+
+## Dictionaries
+
 1. German (UK)
 2. German (US)
 3. Arabic (UK)
