@@ -2,6 +2,7 @@
 *.apkg
 *.m4a
 *.sqlite3
+*.wav
 *.zip
 
 # deck

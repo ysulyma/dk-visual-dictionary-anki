@@ -16,8 +16,6 @@ OUTPUT_FILE = "out/ukrainian-english.apkg"
 with open("deck-id.txt") as f:
     DECK_ID = int(f.read())
 
-print(DECK_ID)
-exit()
 # create a package
 package = genanki.Package([])
 
