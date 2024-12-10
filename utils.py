@@ -94,3 +94,26 @@ def make_note(ctx: Context, entry: Entry):
         fields=[f"{entry.front}<br>[sound:{entry.audio}]", entry.back],
         tags=[f"page:{entry.page_number}"],
     )
+
+
+class fcolors:
+    HI_RED = "\033[91m"
+    HI_BLUE = "\033[94m"
+    WHITE = "\033[97m"
+    END = "\033[0m"
+
+
+def log(msg, level=0, fg=None):
+    str = "  " * level + msg
+
+    match fg:
+        case None:
+            print(str)
+        case "red":
+            print(fcolors.HI_RED + str + fcolors.END)
+        case "blue":
+            print(fcolors.HI_BLUE + str + fcolors.END)
+        case "white":
+            print(fcolors.WHITE + str + fcolors.END)
+        case _:
+            print(str)
