@@ -111,7 +111,7 @@ class Article:
         if chapter_id is not None:
             query = f"""
                 SELECT * FROM article
-                WHERE chapterid = {chapter_id}
+                WHERE chapterid = {chapter_id} AND articletrans != '(null)'
                 """
         else:
             query = Article.entry_query
